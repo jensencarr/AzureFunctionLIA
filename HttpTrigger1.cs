@@ -1,24 +1,51 @@
-using Microsoft.AspNetCore.Http;
+using System.IO;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Microsoft.Azure.Functions.Worker.Http;
+using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.WebUtilities;
 
-namespace Company.Function
+namespace WeatherApplicationLIA.Functions
 {
-    public class HttpTrigger1
+    public static class GetWeatherTemperatureNowFunction
     {
-        private readonly ILogger<HttpTrigger1> _logger;
-
-        public HttpTrigger1(ILogger<HttpTrigger1> logger)
+        [Function("GetWeatherTemperatureNow")]
+        public static async Task<IActionResult> Run(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = null)] HttpRequestData req,
+            FunctionContext context)
         {
-            _logger = logger;
-        }
+            var logger = context.GetLogger("GetWeatherTemperatureNowFunction");
+            logger.LogInformation("Processing weather request.");
 
-        [Function("HttpTrigger1")]
-        public IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
-        {
-            _logger.LogInformation("C# HTTP trigger function processed a request.");
-            return new OkObjectResult("Welcome to Azure Functions!");
+            // Läser plats från query-parametern i URL
+            var queryParams = QueryHelpers.ParseQuery(req.Url.Query);
+            string location = queryParams.ContainsKey("location") ? queryParams["location"].ToString() : null;
+
+            if (string.IsNullOrEmpty(location))
+            {
+                return new BadRequestObjectResult("Please provide a location in the query string!");
+            }
+
+            // Skapa en instans av WeatherService och hämta koordinater
+            var weatherService = new WeatherService();
+            var (lat, lon) = WeatherService.GetCoordinates(location);
+
+            try
+            {
+                // Hämta väderdata
+                var weatherData = await weatherService.GetWeatherDataAsync("pmp3g", "2", lon, lat);
+                var temperature = WeatherService.ParseTemperatureNow(weatherData);
+
+                // Returnera bara temperaturen
+                return new OkObjectResult($"{temperature} °C");
+            }
+            catch (HttpRequestException ex)
+            {
+                logger.LogError($"Error fetching weather data: {ex.Message}");
+                return new BadRequestObjectResult("Error fetching weather data.");
+            }
         }
     }
 }
