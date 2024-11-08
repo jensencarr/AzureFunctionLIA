@@ -88,7 +88,7 @@ namespace WeatherApplicationLIA.Functions
         }
 
         [Function("GetDailyAverages")]
-        public static async Task<IActionResult> Run(
+        public static async Task<IActionResult> GetAverageWeaterDataForDate(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequestData req,
             FunctionContext context)
         {

@@ -118,11 +118,11 @@ public class WeatherService
     {
         return parameter?.ToLower() switch
         {
-            "temperature" => $"\nGenomsnittlig temperatur för {location}\n{d.Time} \n{d.Temperature:F1} °C",
-            "windspeed" => $"\nGenomsnittlig vindhastighet för {location}\n{d.Time}: \n{d.WindSpeed:F1} m/s",
-            "winddirection" => $"\nGenomsnittlig vindriktning för {location}\n{d.Time}: \n{d.WindDirection:F1} grader",
-            "precipitation" => $"\nGenomsnittlig nederbörd för {location}\n{d.Time}: \n{d.Precipitation:F1} mm",
-            _ => $"Genomsnittlig väderdata för {location} den {d.Time}:\n" +
+            "temperature" => $"\nTemperatur i {location}\n{d.Time} \n{d.Temperature:F1} °C",
+            "windspeed" => $"\nVindhastighet i {location}\n{d.Time}: \n{d.WindSpeed:F1} m/s",
+            "winddirection" => $"\nVindriktning i {location}\n{d.Time}: \n{d.WindDirection:F1} grader",
+            "precipitation" => $"\nNederbörd i {location}\n{d.Time}: \n{d.Precipitation:F1} mm",
+            _ => $"Väderdata i {location} den {d.Time}:\n" +
                  $"Temperatur: {d.Temperature:F1} °C\n" +
                  $"Vindhastighet: {d.WindSpeed:F1} m/s\n" +
                  $"Vindriktning: {d.WindDirection:F1} grader\n" +
