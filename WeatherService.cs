@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 public class WeatherService
 {
@@ -77,7 +78,7 @@ public class WeatherService
 
             return temperature;
         }
-        public async Task<string> GetWeatherDataForDateAsync(string location, string date, string parameter = null)
+        public async Task<string> GetWeatherDataForDateAsync(string location, string date, string parameter = null, string scale = "C")
 {
     var (lat, lon) = GetCordinates(location);
     var weatherData = await GetWeatherDataAsync("pmp3g", "2", lon, lat);
@@ -99,7 +100,8 @@ public class WeatherService
         .Select(ts =>
         {
             var time = ts["validTime"].ToString();
-            var temperature = ts["parameters"].FirstOrDefault(p => p["name"].ToString() == "t")?["values"]?[0]?.Value<double>() ?? 0.0;
+            var temperatureC = ts["parameters"].FirstOrDefault(p => p["name"].ToString() == "t")?["values"]?[0]?.Value<double>() ?? 0.0;
+            var temperature = scale == "F" ? ConvertCelsiusToFahrenheit(temperatureC) : temperatureC;
             var windSpeed = ts["parameters"].FirstOrDefault(p => p["name"].ToString() == "ws")?["values"]?[0]?.Value<double>() ?? 0.0;
             var windDirection = ts["parameters"].FirstOrDefault(p => p["name"].ToString() == "wd")?["values"]?[0]?.Value<double>() ?? 0.0;
             var precipitation = ts["parameters"].FirstOrDefault(p => p["name"].ToString() == "pmean")?["values"]?[0]?.Value<double>() ?? 0.0;
@@ -113,17 +115,19 @@ public class WeatherService
         return "Ingen data|wi-na";
     }
 
+    var tempUnit = scale == "F" ? "°F" : "°C";
+
     // Filtrera data baserat på specificerad parameter
     var filteredData = dataForSelectedDate.Select(d =>
     {
         return parameter?.ToLower() switch
         {
-            "temperature" => $"\nTemperatur i {location}\n{d.Time} \n{d.Temperature:F1} °C",
+            "temperature" => $"\nTemperatur i {location}\n{d.Time} \n{d.Temperature:F1} {tempUnit}",
             "windspeed" => $"\nVindhastighet i {location}\n{d.Time}: \n{d.WindSpeed:F1} m/s",
             "winddirection" => $"\nVindriktning i {location}\n{d.Time}: \n{d.WindDirection:F1} grader",
             "precipitation" => $"\nNederbörd i {location}\n{d.Time}: \n{d.Precipitation:F1} mm",
             _ => $"Väderdata i {location} den {d.Time}:\n" +
-                 $"Temperatur: {d.Temperature:F1} °C\n" +
+                 $"Temperatur: {d.Temperature:F1} {tempUnit}\n" +
                  $"Vindhastighet: {d.WindSpeed:F1} m/s\n" +
                  $"Vindriktning: {d.WindDirection:F1} grader\n" +
                  $"Nederbörd: {d.Precipitation:F1} mm\n"
@@ -185,5 +189,32 @@ public async Task<string> GetDailyAveragesAsync(string location, string date)
        $"Vindhastighet: {avgWindSpeed:F1} m/s\n" +
        $"Nederbörd: {avgPrecipitation:F1} mm";
 }
+public static double ConvertCelsiusToFahrenheit(double celsius)
+    {
+        return (celsius * 9 / 5) + 32;
+    }
+    
+public static string ConvertTemperatureInResult(string result, string scale)
+{
+    if (scale == "F")
+    {
+        // Hitta alla temperaturvärden i resultatsträngen som slutar med "°C" och konvertera dem
+        var regex = new Regex(@"(-?\d+(\,\d+)?)\s*°C");
+        var matches = regex.Matches(result);
+
+        foreach (Match match in matches)
+        {
+            if (double.TryParse(match.Groups[1].Value, out double tempCelsius))
+            {
+                double tempFahrenheit = WeatherService.ConvertCelsiusToFahrenheit(tempCelsius);
+                // Ersätt endast den numeriska delen och behåll enheten
+                result = result.Replace(match.Groups[1].Value, $"{tempFahrenheit:F1}");
+                result = result.Replace("°C", "°F");
+            }
+        }
+    }
+    return result;
+}
+
         
 }
